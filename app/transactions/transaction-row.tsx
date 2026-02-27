@@ -26,10 +26,18 @@ export function TransactionRow({
     description: string | null;
     categoryName: string;
     categoryType: string;
+    imageData: string | null;
+    imageType: string | null;
   };
 }) {
   const router = useRouter();
   const [showDelete, setShowDelete] = useState(false);
+  const [showImage, setShowImage] = useState(false);
+
+  const imageSrc =
+    transaction.imageData && transaction.imageType
+      ? `data:${transaction.imageType};base64,${transaction.imageData}`
+      : null;
 
   async function handleDelete() {
     await deleteTransaction(transaction.id);
@@ -40,21 +48,36 @@ export function TransactionRow({
   return (
     <>
       <div className="flex flex-col gap-2 rounded-lg border border-slate-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-slate-800">
-        <div className="min-w-0">
-          <p className="truncate font-medium">
-            {transaction.description || "Expense"}
-          </p>
-          <p className="text-xs text-muted-foreground sm:text-sm">
-            {new Date(transaction.date).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}{" "}
-            •{" "}
-            <Badge variant="secondary" className="inline text-xs font-normal">
-              {transaction.categoryName}
-            </Badge>
-          </p>
+        <div className="flex min-w-0 flex-1 gap-3">
+          {imageSrc ? (
+            <button
+              type="button"
+              onClick={() => setShowImage(true)}
+              className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border hover:opacity-90"
+            >
+              <img
+                src={imageSrc}
+                alt="Receipt"
+                className="h-full w-full object-cover"
+              />
+            </button>
+          ) : null}
+          <div className="min-w-0">
+            <p className="truncate font-medium">
+              {transaction.description || "Expense"}
+            </p>
+            <p className="text-xs text-muted-foreground sm:text-sm">
+              {new Date(transaction.date).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}{" "}
+              •{" "}
+              <Badge variant="secondary" className="inline text-xs font-normal">
+                {transaction.categoryName}
+              </Badge>
+            </p>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="font-semibold text-red-600 dark:text-red-400">
@@ -70,6 +93,19 @@ export function TransactionRow({
           </Button>
         </div>
       </div>
+
+      {showImage && imageSrc && (
+        <Dialog open={showImage} onOpenChange={setShowImage}>
+          <DialogContent className="max-w-[95vw] sm:max-w-lg">
+            <DialogTitle className="sr-only">Receipt image</DialogTitle>
+            <img
+              src={imageSrc}
+              alt="Receipt"
+              className="w-full rounded-lg object-contain"
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={showDelete} onOpenChange={setShowDelete}>
         <DialogContent>

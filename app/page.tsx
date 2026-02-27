@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { BudgetPieChart } from "@/components/budget-pie-chart";
 import { BudgetBreakdownList } from "@/components/budget-breakdown-list";
 import { formatCurrency } from "@/lib/format";
+import { TransactionRow } from "@/app/transactions/transaction-row";
 import { ArrowRight, AlertCircle } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -154,25 +155,21 @@ export default async function DashboardPage() {
                 </Link>
               </p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {recentTransactions.slice(0, 5).map((txn) => (
-                  <div
+                  <TransactionRow
                     key={txn.id}
-                    className="flex flex-col gap-1 border-b border-slate-100 py-2 last:border-0 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">
-                        {txn.description || txn.categoryName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(txn.date).toLocaleDateString()} •{" "}
-                        {txn.categoryName}
-                      </p>
-                    </div>
-                    <span className="shrink-0 font-semibold text-red-600 dark:text-red-400">
-                      -{formatCurrency(Number(txn.amount))}
-                    </span>
-                  </div>
+                    transaction={{
+                      id: txn.id,
+                      amount: Number(txn.amount),
+                      date: txn.date,
+                      description: txn.description,
+                      categoryName: txn.categoryName,
+                      categoryType: txn.categoryType,
+                      imageData: txn.imageData,
+                      imageType: txn.imageType,
+                    }}
+                  />
                 ))}
               </div>
             )}

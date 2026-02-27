@@ -51,6 +51,8 @@ export const transactions = pgTable("transactions", {
     .references(() => budgetCategories.id, { onDelete: "cascade" }),
   date: timestamp("date").notNull(),
   description: text("description"),
+  imageData: text("image_data"),
+  imageType: text("image_type"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

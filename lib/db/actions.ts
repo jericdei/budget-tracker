@@ -145,6 +145,8 @@ export async function getTransactions(periodDate?: Date) {
       amount: transactions.amount,
       date: transactions.date,
       description: transactions.description,
+      imageData: transactions.imageData,
+      imageType: transactions.imageType,
       categoryId: transactions.budgetCategoryId,
       categoryName: budgetCategories.name,
       categoryType: budgetCategories.type,
@@ -197,12 +199,16 @@ export async function createTransaction(data: {
   budgetCategoryId: string;
   date: string;
   description?: string;
+  imageData?: string;
+  imageType?: string;
 }) {
   await db.insert(transactions).values({
     amount: data.amount,
     budgetCategoryId: data.budgetCategoryId,
     date: new Date(data.date),
     description: data.description ?? null,
+    imageData: data.imageData ?? null,
+    imageType: data.imageType ?? null,
   });
   revalidatePath("/");
   revalidatePath("/transactions");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,9 +21,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { ImagePlus, Plus, X } from "lucide-react";
 import { createTransaction } from "@/lib/db/actions";
 import type { BudgetCategory } from "@/lib/db/schema";
+
+function fileToBase64(file: File): Promise<{ data: string; type: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const [header, base64] = result.split(",");
+      const type = header.match(/data:(image\/[^;]+)/)?.[1] ?? "image/jpeg";
+      resolve({ data: base64 ?? "", type });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export function AddTransactionDialog({
   categories,
@@ -31,6 +45,7 @@ export function AddTransactionDialog({
   categories: BudgetCategory[];
 }) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [budgetCategoryId, setBudgetCategoryId] = useState("");
@@ -38,6 +53,8 @@ export function AddTransactionDialog({
     new Date().toISOString().split("T")[0]
   );
   const [description, setDescription] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,18 +64,53 @@ export function AddTransactionDialog({
       !budgetCategoryId
     )
       return;
+
+    let imageData: string | undefined;
+    let imageType: string | undefined;
+
+    if (imageFile) {
+      try {
+        const { data, type } = await fileToBase64(imageFile);
+        if (data.length < 5_000_000) {
+          imageData = data;
+          imageType = type;
+        }
+      } catch {
+        // Skip image on error
+      }
+    }
+
     await createTransaction({
       amount,
       budgetCategoryId,
       date,
       description: description.trim() || undefined,
+      imageData,
+      imageType,
     });
     setAmount("");
     setBudgetCategoryId("");
     setDate(new Date().toISOString().split("T")[0]);
     setDescription("");
+    setImageFile(null);
+    setImagePreview(null);
     setOpen(false);
     router.refresh();
+  }
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file?.type.startsWith("image/")) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+    e.target.value = "";
+  }
+
+  function clearImage() {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
   }
 
   return (
@@ -126,6 +178,46 @@ export function AddTransactionDialog({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="image">Receipt/photo (optional)</Label>
+              <input
+                ref={fileInputRef}
+                id="image"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+              {imagePreview ? (
+                <div className="relative inline-block">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="h-24 w-24 rounded-lg border object-cover"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -right-2 -top-2 h-6 w-6"
+                    onClick={clearImage}
+                  >
+                    <X className="size-3" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-fit"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <ImagePlus className="size-4" />
+                  Attach image
+                </Button>
+              )}
             </div>
           </div>
           <DialogFooter>

@@ -64,6 +64,8 @@ export default async function TransactionsPage() {
                     description: txn.description,
                     categoryName: txn.categoryName,
                     categoryType: txn.categoryType,
+                    imageData: txn.imageData,
+                    imageType: txn.imageType,
                   }}
                 />
               ))}
