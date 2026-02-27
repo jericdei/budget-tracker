@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Budget Tracker
 
-## Getting Started
+A budget tracking app built with Next.js, Postgres (Neon), Drizzle ORM, React, TypeScript, Tailwind, and shadcn/ui.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Income Sources** — Set up sources of funds (salary, freelance, etc.) with different frequencies (weekly, bi-weekly, monthly, yearly)
+- **Budget Planning** — Allocate your income across expenses, savings, insurance, and more
+- **Transactions** — Log expenses that automatically deduct from the relevant budget category
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Install dependencies**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   ```bash
+   bun install
+   ```
 
-## Learn More
+2. **Set up the database**
 
-To learn more about Next.js, take a look at the following resources:
+   - Create a [Neon](https://neon.tech) account and project
+   - Copy your connection string and create a `.env` file:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```env
+   DATABASE_URL="postgresql://user:password@host/database?sslmode=require"
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. **Push the schema to the database**
 
-## Deploy on Vercel
+   ```bash
+   bun run db:push
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. **Run the development server**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ```bash
+   bun dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000)
+
+## Database Scripts
+
+- `bun run db:push` — Push schema changes to the database
+- `bun run db:generate` — Generate migrations
+- `bun run db:studio` — Open Drizzle Studio to inspect data
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router)
+- **Database:** Postgres on Neon + Drizzle ORM
+- **UI:** React, TypeScript, Tailwind CSS, shadcn/ui
