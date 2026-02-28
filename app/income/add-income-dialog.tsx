@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,25 +21,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { createIncomeSource } from "@/lib/db/actions";
 
 export function AddIncomeSourceDialog() {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [frequency, setFrequency] = useState("monthly");
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !amount || parseFloat(amount) <= 0) return;
-    await createIncomeSource({ name: name.trim(), amount, frequency });
-    setName("");
-    setAmount("");
-    setFrequency("monthly");
-    setOpen(false);
-    router.refresh();
+    startTransition(async () => {
+      await createIncomeSource({ name: name.trim(), amount, frequency });
+      setName("");
+      setAmount("");
+      setFrequency("monthly");
+      setOpen(false);
+      router.refresh();
+    });
   }
 
   return (
@@ -106,11 +109,22 @@ export function AddIncomeSourceDialog() {
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
+              disabled={isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={!name.trim() || !amount}>
-              Add Source
+            <Button
+              type="submit"
+              disabled={isPending || !name.trim() || !amount}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Add Source"
+              )}
             </Button>
           </DialogFooter>
         </form>

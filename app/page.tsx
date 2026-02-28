@@ -3,6 +3,7 @@ import {
   getTotalPeriodIncome,
   getSpendingByCategory,
   getTransactions,
+  getBudgetCategories,
 } from "@/lib/db/actions";
 import { getCurrentPeriodLabel } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,11 +16,12 @@ import { TransactionRow } from "@/app/transactions/transaction-row";
 import { ArrowRight, AlertCircle } from "lucide-react";
 
 export default async function DashboardPage() {
-  const [periodIncome, spendingByCategory, recentTransactions] =
+  const [periodIncome, spendingByCategory, recentTransactions, categories] =
     await Promise.all([
       getTotalPeriodIncome(),
       getSpendingByCategory(),
       getTransactions(),
+      getBudgetCategories(),
     ]);
 
   const totalAllocated = spendingByCategory.reduce(
@@ -99,40 +101,7 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
-        <Card className="bg-white/80 dark:bg-slate-900/50 lg:col-span-2">
-          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>Budget by Category</CardTitle>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/budget">
-                View all
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {spendingByCategory.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No budget categories yet.{" "}
-                <Link href="/budget" className="text-emerald-600 hover:underline">
-                  Create your budget
-                </Link>
-              </p>
-            ) : (
-              <>
-                {/* Mobile: Budget breakdown list */}
-                <div className="sm:hidden">
-                  <BudgetBreakdownList data={spendingByCategory} />
-                </div>
-                {/* Desktop: Pie chart */}
-                <div className="hidden sm:block">
-                  <BudgetPieChart data={spendingByCategory} />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
+      <div className="space-y-4 sm:space-y-6">
         <Card className="bg-white/80 dark:bg-slate-900/50">
           <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>Recent Transactions</CardTitle>
@@ -164,14 +133,49 @@ export default async function DashboardPage() {
                       amount: Number(txn.amount),
                       date: txn.date,
                       description: txn.description,
+                      categoryId: txn.categoryId,
                       categoryName: txn.categoryName,
                       categoryType: txn.categoryType,
                       imageData: txn.imageData,
                       imageType: txn.imageType,
                     }}
+                    categories={categories}
                   />
                 ))}
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/80 dark:bg-slate-900/50">
+          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle>Budget by Category</CardTitle>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/budget">
+                View all
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {spendingByCategory.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                No budget categories yet.{" "}
+                <Link href="/budget" className="text-emerald-600 hover:underline">
+                  Create your budget
+                </Link>
+              </p>
+            ) : (
+              <>
+                {/* Mobile: Budget breakdown list */}
+                <div className="sm:hidden">
+                  <BudgetBreakdownList data={spendingByCategory} />
+                </div>
+                {/* Desktop: Pie chart */}
+                <div className="hidden sm:block">
+                  <BudgetPieChart data={spendingByCategory} />
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

@@ -62,11 +62,13 @@ export default async function TransactionsPage() {
                     amount: Number(txn.amount),
                     date: txn.date,
                     description: txn.description,
+                    categoryId: txn.categoryId,
                     categoryName: txn.categoryName,
                     categoryType: txn.categoryType,
                     imageData: txn.imageData,
                     imageType: txn.imageType,
                   }}
+                  categories={categories}
                 />
               ))}
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,31 +21,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { createBudgetCategory } from "@/lib/db/actions";
 import { BUDGET_TYPE_LABELS } from "@/lib/constants";
 
 export function AddBudgetCategoryDialog() {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [type, setType] = useState("expense");
   const [allocatedAmount, setAllocatedAmount] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !allocatedAmount || parseFloat(allocatedAmount) < 0)
       return;
-    await createBudgetCategory({
-      name: name.trim(),
-      type,
-      allocatedAmount,
+    startTransition(async () => {
+      await createBudgetCategory({
+        name: name.trim(),
+        type,
+        allocatedAmount,
+      });
+      setName("");
+      setType("expense");
+      setAllocatedAmount("");
+      setOpen(false);
+      router.refresh();
     });
-    setName("");
-    setType("expense");
-    setAllocatedAmount("");
-    setOpen(false);
-    router.refresh();
   }
 
   return (
@@ -108,14 +111,22 @@ export function AddBudgetCategoryDialog() {
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
+              disabled={isPending}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={!name.trim() || !allocatedAmount}
+              disabled={isPending || !name.trim() || !allocatedAmount}
             >
-              Add Category
+              {isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Add Category"
+              )}
             </Button>
           </DialogFooter>
         </form>

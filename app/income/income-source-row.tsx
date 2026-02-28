@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { deleteIncomeSource } from "@/lib/db/actions";
 import { FREQUENCY_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
@@ -22,12 +22,15 @@ export function IncomeSourceRow({
   source: { id: string; name: string; amount: number; frequency: string };
 }) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [showDelete, setShowDelete] = useState(false);
 
-  async function handleDelete() {
-    await deleteIncomeSource(source.id);
-    setShowDelete(false);
-    router.refresh();
+  function handleDelete() {
+    startTransition(async () => {
+      await deleteIncomeSource(source.id);
+      setShowDelete(false);
+      router.refresh();
+    });
   }
 
   return (
@@ -59,11 +62,26 @@ export function IncomeSourceRow({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDelete(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDelete(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

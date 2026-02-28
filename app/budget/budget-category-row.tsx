@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { deleteBudgetCategory, updateBudgetCategory } from "@/lib/db/actions";
 import { BUDGET_TYPE_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
@@ -41,6 +41,7 @@ export function BudgetCategoryRow({
   remaining: number;
 }) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [showDelete, setShowDelete] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editName, setEditName] = useState(category.name);
@@ -56,22 +57,26 @@ export function BudgetCategoryRow({
     setShowEdit(true);
   }
 
-  async function handleEdit(e: React.FormEvent) {
+  function handleEdit(e: React.FormEvent) {
     e.preventDefault();
     if (!editName.trim() || !editAmount || parseFloat(editAmount) < 0) return;
-    await updateBudgetCategory(category.id, {
-      name: editName.trim(),
-      type: editType,
-      allocatedAmount: editAmount,
+    startTransition(async () => {
+      await updateBudgetCategory(category.id, {
+        name: editName.trim(),
+        type: editType,
+        allocatedAmount: editAmount,
+      });
+      setShowEdit(false);
+      router.refresh();
     });
-    setShowEdit(false);
-    router.refresh();
   }
 
-  async function handleDelete() {
-    await deleteBudgetCategory(category.id);
-    setShowDelete(false);
-    router.refresh();
+  function handleDelete() {
+    startTransition(async () => {
+      await deleteBudgetCategory(category.id);
+      setShowDelete(false);
+      router.refresh();
+    });
   }
 
   const pct = Math.min(100, (spent / category.allocatedAmount) * 100);
@@ -173,22 +178,30 @@ export function BudgetCategoryRow({
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowEdit(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={!editName.trim() || !editAmount}
-              >
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </form>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowEdit(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isPending || !editName.trim() || !editAmount}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
         </DialogContent>
       </Dialog>
 
@@ -202,11 +215,26 @@ export function BudgetCategoryRow({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDelete(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDelete(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

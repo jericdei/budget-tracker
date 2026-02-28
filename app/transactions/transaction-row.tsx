@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,26 +12,33 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { deleteTransaction } from "@/lib/db/actions";
 import { formatCurrency } from "@/lib/format";
+import { EditTransactionDialog } from "@/app/transactions/edit-transaction-dialog";
+import type { BudgetCategory } from "@/lib/db/schema";
 
 export function TransactionRow({
   transaction,
+  categories,
 }: {
   transaction: {
     id: string;
     amount: number;
     date: Date | string;
     description: string | null;
+    categoryId: string;
     categoryName: string;
     categoryType: string;
     imageData: string | null;
     imageType: string | null;
   };
+  categories?: BudgetCategory[];
 }) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [showDelete, setShowDelete] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [showImage, setShowImage] = useState(false);
 
   const imageSrc =
@@ -39,10 +46,12 @@ export function TransactionRow({
       ? `data:${transaction.imageType};base64,${transaction.imageData}`
       : null;
 
-  async function handleDelete() {
-    await deleteTransaction(transaction.id);
-    setShowDelete(false);
-    router.refresh();
+  function handleDelete() {
+    startTransition(async () => {
+      await deleteTransaction(transaction.id);
+      setShowDelete(false);
+      router.refresh();
+    });
   }
 
   return (
@@ -83,6 +92,17 @@ export function TransactionRow({
           <span className="font-semibold text-red-600 dark:text-red-400">
             -{formatCurrency(transaction.amount)}
           </span>
+          {categories && categories.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              onClick={() => setShowEdit(true)}
+              aria-label="Edit transaction"
+            >
+              <Pencil className="size-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -93,6 +113,23 @@ export function TransactionRow({
           </Button>
         </div>
       </div>
+
+      {categories && categories.length > 0 && (
+        <EditTransactionDialog
+          transaction={{
+            id: transaction.id,
+            amount: transaction.amount,
+            date: transaction.date,
+            description: transaction.description,
+            categoryId: transaction.categoryId,
+            imageData: transaction.imageData,
+            imageType: transaction.imageType,
+          }}
+          categories={categories}
+          open={showEdit}
+          onOpenChange={setShowEdit}
+        />
+      )}
 
       {showImage && imageSrc && (
         <Dialog open={showImage} onOpenChange={setShowImage}>
@@ -118,11 +155,26 @@ export function TransactionRow({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDelete(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDelete(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

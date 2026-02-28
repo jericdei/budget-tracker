@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { roundToTwoDecimals } from "@/lib/format";
 import { eq, and, gte, lte, sql, sum } from "drizzle-orm";
 import { db } from "./index";
 import {
@@ -43,7 +44,7 @@ export async function createIncomeSource(data: {
 }) {
   await db.insert(incomeSources).values({
     name: data.name,
-    amount: data.amount,
+    amount: roundToTwoDecimals(data.amount),
     frequency: data.frequency as NewIncomeSource["frequency"],
   });
   revalidatePath("/");
@@ -70,7 +71,7 @@ export async function createBudgetCategory(data: {
   await db.insert(budgetCategories).values({
     name: data.name,
     type: data.type as NewBudgetCategory["type"],
-    allocatedAmount: data.allocatedAmount,
+    allocatedAmount: roundToTwoDecimals(data.allocatedAmount),
   });
   revalidatePath("/");
   revalidatePath("/budget");
@@ -86,7 +87,9 @@ export async function updateBudgetCategory(
     .set({
       ...(data.name && { name: data.name }),
       ...(data.type && { type: data.type as NewBudgetCategory["type"] }),
-      ...(data.allocatedAmount && { allocatedAmount: data.allocatedAmount }),
+      ...(data.allocatedAmount && {
+        allocatedAmount: roundToTwoDecimals(data.allocatedAmount),
+      }),
     })
     .where(eq(budgetCategories.id, id));
   revalidatePath("/");
@@ -203,13 +206,44 @@ export async function createTransaction(data: {
   imageType?: string;
 }) {
   await db.insert(transactions).values({
-    amount: data.amount,
+    amount: roundToTwoDecimals(data.amount),
     budgetCategoryId: data.budgetCategoryId,
     date: new Date(data.date),
     description: data.description ?? null,
     imageData: data.imageData ?? null,
     imageType: data.imageType ?? null,
   });
+  revalidatePath("/");
+  revalidatePath("/transactions");
+  revalidatePath("/budget");
+}
+
+export async function updateTransaction(
+  id: string,
+  data: {
+    amount?: string;
+    budgetCategoryId?: string;
+    date?: string;
+    description?: string;
+    imageData?: string | null;
+    imageType?: string | null;
+  }
+) {
+  await db
+    .update(transactions)
+    .set({
+      ...(data.amount && { amount: roundToTwoDecimals(data.amount) }),
+      ...(data.budgetCategoryId && {
+        budgetCategoryId: data.budgetCategoryId,
+      }),
+      ...(data.date && { date: new Date(data.date) }),
+      ...(data.description !== undefined && {
+        description: data.description || null,
+      }),
+      ...(data.imageData !== undefined && { imageData: data.imageData }),
+      ...(data.imageType !== undefined && { imageType: data.imageType }),
+    })
+    .where(eq(transactions.id, id));
   revalidatePath("/");
   revalidatePath("/transactions");
   revalidatePath("/budget");

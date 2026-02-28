@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +10,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,37 +20,70 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, Loader2, Plus, X } from "lucide-react";
-import { createTransaction } from "@/lib/db/actions";
+import { ImagePlus, Loader2, X } from "lucide-react";
+import { updateTransaction } from "@/lib/db/actions";
 import { compressImage } from "@/lib/utils";
 import type { BudgetCategory } from "@/lib/db/schema";
 
-export function AddTransactionDialog({
+export function EditTransactionDialog({
+  transaction,
   categories,
+  open,
+  onOpenChange,
 }: {
+  transaction: {
+    id: string;
+    amount: number;
+    date: Date | string;
+    description: string | null;
+    categoryId: string;
+    imageData: string | null;
+    imageType: string | null;
+  };
   categories: BudgetCategory[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState("");
-  const [budgetCategoryId, setBudgetCategoryId] = useState("");
-  const [date, setDate] = useState(
-    new Date().toISOString().split("T")[0]
+  const dateStr =
+    typeof transaction.date === "string"
+      ? transaction.date.split("T")[0]
+      : new Date(transaction.date).toISOString().split("T")[0];
+  const [amount, setAmount] = useState(transaction.amount.toString());
+  const [budgetCategoryId, setBudgetCategoryId] = useState(
+    transaction.categoryId || ""
   );
-  const [description, setDescription] = useState("");
+  const [date, setDate] = useState(dateStr);
+  const [description, setDescription] = useState(
+    transaction.description ?? ""
+  );
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const existingImageSrc =
+    transaction.imageData && transaction.imageType
+      ? `data:${transaction.imageType};base64,${transaction.imageData}`
+      : null;
+
+  useEffect(() => {
+    if (open) {
+      const d =
+        typeof transaction.date === "string"
+          ? transaction.date.split("T")[0]
+          : new Date(transaction.date).toISOString().split("T")[0];
+      setAmount(transaction.amount.toString());
+      setBudgetCategoryId(transaction.categoryId || "");
+      setDate(d);
+      setDescription(transaction.description ?? "");
+      setImageFile(null);
+      setImagePreview(null);
+    }
+  }, [open, transaction.id, transaction.amount, transaction.date, transaction.description, transaction.categoryId]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (
-      !amount ||
-      parseFloat(amount) <= 0 ||
-      !budgetCategoryId
-    )
-      return;
+    if (!amount || parseFloat(amount) <= 0 || !budgetCategoryId) return;
 
     startTransition(async () => {
       let imageData: string | undefined;
@@ -67,21 +99,16 @@ export function AddTransactionDialog({
         }
       }
 
-      await createTransaction({
+      await updateTransaction(transaction.id, {
         amount,
         budgetCategoryId,
         date,
-        description: description.trim() || undefined,
-        imageData,
-        imageType,
+        description: description.trim(),
+        ...(imageFile
+          ? { imageData: imageData ?? null, imageType: imageType ?? null }
+          : {}),
       });
-      setAmount("");
-      setBudgetCategoryId("");
-      setDate(new Date().toISOString().split("T")[0]);
-      setDescription("");
-      setImageFile(null);
-      setImagePreview(null);
-      setOpen(false);
+      onOpenChange(false);
       router.refresh();
     });
   }
@@ -102,27 +129,21 @@ export function AddTransactionDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="size-4" />
-          Add Transaction
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add Transaction</DialogTitle>
+            <DialogTitle>Edit Transaction</DialogTitle>
             <DialogDescription>
-              Log an expense. It will automatically deduct from the selected
-              budget category.
+              Update the transaction details. Changes will update the budget
+              category deductions.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="amount">Amount</Label>
+              <Label htmlFor="edit-amount">Amount</Label>
               <Input
-                id="amount"
+                id="edit-amount"
                 type="number"
                 step="0.01"
                 min="0.01"
@@ -132,7 +153,7 @@ export function AddTransactionDialog({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="category">Budget Category</Label>
+              <Label htmlFor="edit-category">Budget Category</Label>
               <Select
                 value={budgetCategoryId}
                 onValueChange={setBudgetCategoryId}
@@ -150,28 +171,28 @@ export function AddTransactionDialog({
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor="edit-date">Date</Label>
               <Input
-                id="date"
+                id="edit-date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="description">Description (optional)</Label>
+              <Label htmlFor="edit-description">Description (optional)</Label>
               <Input
-                id="description"
+                id="edit-description"
                 placeholder="e.g. Grocery run"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="image">Receipt/photo (optional)</Label>
+              <Label htmlFor="edit-image">Receipt/photo (optional)</Label>
               <input
                 ref={fileInputRef}
-                id="image"
+                id="edit-image"
                 type="file"
                 accept="image/*"
                 className="hidden"
@@ -194,6 +215,24 @@ export function AddTransactionDialog({
                     <X className="size-3" />
                   </Button>
                 </div>
+              ) : existingImageSrc ? (
+                <div className="relative inline-block">
+                  <img
+                    src={existingImageSrc}
+                    alt="Current receipt"
+                    className="h-24 w-24 rounded-lg border object-cover"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ImagePlus className="size-4" />
+                    Replace image
+                  </Button>
+                </div>
               ) : (
                 <Button
                   type="button"
@@ -212,7 +251,7 @@ export function AddTransactionDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
               Cancel
@@ -229,10 +268,10 @@ export function AddTransactionDialog({
               {isPending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Adding...
+                  Saving...
                 </>
               ) : (
-                "Add Transaction"
+                "Save"
               )}
             </Button>
           </DialogFooter>
