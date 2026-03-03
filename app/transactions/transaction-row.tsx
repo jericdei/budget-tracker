@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { ImageIcon, Loader2, Pencil, Trash2 } from "lucide-react";
 import { deleteTransaction } from "@/lib/db/actions";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { EditTransactionDialog } from "@/app/transactions/edit-transaction-dialog";
@@ -58,19 +58,28 @@ export function TransactionRow({
     <>
       <div className="flex flex-col gap-2 rounded-lg border border-slate-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 dark:border-slate-800">
         <div className="flex min-w-0 flex-1 gap-3">
-          {imageSrc ? (
-            <button
-              type="button"
-              onClick={() => setShowImage(true)}
-              className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border hover:opacity-90"
-            >
-              <img
-                src={imageSrc}
-                alt="Receipt"
-                className="h-full w-full object-cover"
-              />
-            </button>
-          ) : null}
+          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border bg-muted">
+            {imageSrc ? (
+              <button
+                type="button"
+                onClick={() => setShowImage(true)}
+                className="block h-full w-full hover:opacity-90"
+              >
+                <img
+                  src={imageSrc}
+                  alt="Receipt"
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            ) : (
+              <div
+                className="flex h-full w-full items-center justify-center text-muted-foreground"
+                aria-hidden
+              >
+                <ImageIcon className="size-6" />
+              </div>
+            )}
+          </div>
           <div className="min-w-0">
             <p className="truncate font-medium">
               {transaction.description || "Expense"}
