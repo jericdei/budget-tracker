@@ -4,8 +4,8 @@ import {
   getSpendingByCategory,
   getTransactions,
   getBudgetCategories,
+  getCurrentPeriodLabel,
 } from "@/lib/db/actions";
-import { getCurrentPeriodLabel } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,15 +13,18 @@ import { BudgetPieChart } from "@/components/budget-pie-chart";
 import { BudgetBreakdownList } from "@/components/budget-breakdown-list";
 import { formatCurrency } from "@/lib/format";
 import { TransactionRow } from "@/app/transactions/transaction-row";
+import { StartNewPeriodDialog } from "@/components/start-new-period-dialog";
+import { AddFundsDialog } from "@/components/add-funds-dialog";
 import { ArrowRight, AlertCircle } from "lucide-react";
 
 export default async function DashboardPage() {
-  const [periodIncome, spendingByCategory, recentTransactions, categories] =
+  const [periodIncome, spendingByCategory, recentTransactions, categories, periodLabel] =
     await Promise.all([
       getTotalPeriodIncome(),
       getSpendingByCategory(),
       getTransactions(),
       getBudgetCategories(),
+      getCurrentPeriodLabel(),
     ]);
 
   const totalAllocated = spendingByCategory.reduce(
@@ -29,29 +32,40 @@ export default async function DashboardPage() {
     0
   );
   const totalSpent = spendingByCategory.reduce((acc, c) => acc + c.spent, 0);
+  const remainingFunds = periodIncome - totalSpent;
   const overBudget = spendingByCategory.filter((c) => c.remaining < 0);
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
-          Dashboard
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-          {getCurrentPeriodLabel()} — Bi-monthly budget overview
-        </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-100">
+            Dashboard
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+            {periodLabel} — Budget overview
+          </p>
+        </div>
+        <StartNewPeriodDialog />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         <Card className="border-emerald-200/50 bg-white/80 dark:border-emerald-900/30 dark:bg-slate-900/50">
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Period Income
+              Remaining Funds
             </CardTitle>
+            <AddFundsDialog />
           </CardHeader>
           <CardContent>
-            <p className="min-w-0 break-words text-xl font-bold text-emerald-700 sm:text-2xl dark:text-emerald-400">
-              {formatCurrency(periodIncome)}
+            <p
+              className={`min-w-0 break-words text-xl font-bold sm:text-2xl ${
+                remainingFunds >= 0
+                  ? "text-emerald-700 dark:text-emerald-400"
+                  : "text-red-600 dark:text-red-400"
+              }`}
+            >
+              {formatCurrency(remainingFunds)}
             </p>
           </CardContent>
         </Card>

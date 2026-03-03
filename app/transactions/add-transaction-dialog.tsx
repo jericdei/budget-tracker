@@ -81,8 +81,8 @@ export function AddTransactionDialog({
       setDescription("");
       setImageFile(null);
       setImagePreview(null);
-      setOpen(false);
       router.refresh();
+      setOpen(false);
     });
   }
 
@@ -110,7 +110,7 @@ export function AddTransactionDialog({
         </Button>
       </DialogTrigger>
       <DialogContent>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className={isPending ? "pointer-events-none opacity-70" : ""}>
           <DialogHeader>
             <DialogTitle>Add Transaction</DialogTitle>
             <DialogDescription>

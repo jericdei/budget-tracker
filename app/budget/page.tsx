@@ -2,8 +2,8 @@ import {
   getBudgetCategories,
   getSpendingByCategory,
   getTotalPeriodIncome,
+  getCurrentPeriodLabel,
 } from "@/lib/db/actions";
-import { getCurrentPeriodLabel } from "@/lib/format";
 import {
   Card,
   CardContent,
@@ -12,15 +12,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AddBudgetCategoryDialog } from "./add-budget-dialog";
+import { AddFundsDialog } from "@/components/add-funds-dialog";
 import { BudgetCategoryRow } from "./budget-category-row";
 import { BUDGET_TYPE_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/format";
 
 export default async function BudgetPage() {
-  const [categories, spendingByCategory, periodIncome] = await Promise.all([
+  const [categories, spendingByCategory, periodIncome, periodLabel] = await Promise.all([
     getBudgetCategories(),
     getSpendingByCategory(),
     getTotalPeriodIncome(),
+    getCurrentPeriodLabel(),
   ]);
 
   const spendingMap = new Map(
@@ -40,7 +42,7 @@ export default async function BudgetPage() {
             Budget
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            {getCurrentPeriodLabel()} — Allocate per period (1st–15th, 16th–30th)
+            {periodLabel} — Allocate per period
           </p>
         </div>
         <AddBudgetCategoryDialog />
@@ -48,10 +50,11 @@ export default async function BudgetPage() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
         <Card className="border-emerald-200/50 bg-white/80 dark:border-emerald-900/30 dark:bg-slate-900/50">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Period Income
+              Funds
             </CardTitle>
+            <AddFundsDialog />
           </CardHeader>
           <CardContent>
             <p className="min-w-0 break-words text-xl font-bold text-emerald-700 sm:text-2xl dark:text-emerald-400">
@@ -70,8 +73,8 @@ export default async function BudgetPage() {
               {formatCurrency(totalAllocated)}
             </p>
             <p className="text-muted-foreground mt-1 text-sm">
-              {totalAllocated > periodIncome
-                ? `${formatCurrency(totalAllocated - periodIncome)} over income`
+              {              totalAllocated > periodIncome
+                ? `${formatCurrency(totalAllocated - periodIncome)} over funds`
                 : `${formatCurrency(periodIncome - totalAllocated)} remaining`}
             </p>
           </CardContent>

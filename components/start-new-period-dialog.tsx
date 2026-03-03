@@ -1,0 +1,104 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, RotateCcw } from "lucide-react";
+import { startNewPeriod } from "@/lib/db/actions";
+
+export function StartNewPeriodDialog() {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [funds, setFunds] = useState("");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (funds === "" || parseFloat(funds) < 0) return;
+    startTransition(async () => {
+      await startNewPeriod(new Date(date), funds);
+      setOpen(false);
+      setFunds("");
+      router.refresh();
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <RotateCcw className="size-4" />
+          Start new period
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Start new period</DialogTitle>
+            <DialogDescription>
+              Reset the budget and add funds. Use when you receive your salary.
+              Transactions and spending will be shown from this date onward.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="period-funds">Amount to add</Label>
+              <Input
+                id="period-funds"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={funds}
+                onChange={(e) => setFunds(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="period-date">Period start date</Label>
+              <Input
+                id="period-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending || funds === "" || parseFloat(funds) < 0}>
+              {isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Starting...
+                </>
+              ) : (
+                "Start new period"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

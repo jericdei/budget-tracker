@@ -13,7 +13,7 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: "Budget Tracker",
-  description: "Track income, plan your budget, and manage expenses",
+  description: "Track funds, plan your budget, and manage expenses",
 };
 
 export default function RootLayout({

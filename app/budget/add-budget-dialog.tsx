@@ -64,8 +64,8 @@ export function AddBudgetCategoryDialog() {
           <DialogHeader>
             <DialogTitle>Add Budget Category</DialogTitle>
             <DialogDescription>
-              Create a budget category. Set the amount per period (1st–15th or
-              16th–30th). Transactions will deduct from this amount.
+              Create a budget category. Set the amount per period. Transactions
+              will deduct from this amount.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

@@ -14,32 +14,29 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Loader2, Plus } from "lucide-react";
-import { createIncomeSource } from "@/lib/db/actions";
+import { createIncomeTransaction } from "@/lib/db/actions";
 
-export function AddIncomeSourceDialog() {
+export function AddFundsDialog() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
-  const [frequency, setFrequency] = useState("monthly");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [description, setDescription] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !amount || parseFloat(amount) <= 0) return;
+    if (!amount || parseFloat(amount) <= 0) return;
     startTransition(async () => {
-      await createIncomeSource({ name: name.trim(), amount, frequency });
-      setName("");
+      await createIncomeTransaction({
+        amount,
+        date,
+        description: description.trim() || undefined,
+      });
       setAmount("");
-      setFrequency("monthly");
+      setDate(new Date().toISOString().split("T")[0]);
+      setDescription("");
       setOpen(false);
       router.refresh();
     });
@@ -48,60 +45,50 @@ export function AddIncomeSourceDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button variant="outline" size="sm">
           <Plus className="size-4" />
-          Add Source
+          Add funds
         </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add Income Source</DialogTitle>
+            <DialogTitle>Add funds</DialogTitle>
             <DialogDescription>
-              Add a new source of income. Amounts with a frequency are included
-              in budget planning. &quot;No frequency&quot; tracks irregular or
-              one-time income only.
+              Add money to your budget for this period. This increases your
+              available funds.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="funds-amount">Amount</Label>
               <Input
-                id="name"
-                placeholder="e.g. Salary, Freelance"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="amount">Amount</Label>
-              <Input
-                id="amount"
+                id="funds-amount"
                 type="number"
                 step="0.01"
-                min="0"
+                min="0.01"
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="frequency">Frequency</Label>
-              <Select
-                value={frequency}
-                onValueChange={setFrequency}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No frequency</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="yearly">Yearly</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="funds-date">Date</Label>
+              <Input
+                id="funds-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="funds-description">Description (optional)</Label>
+              <Input
+                id="funds-description"
+                placeholder="e.g. Cash deposit, freelance"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
@@ -113,17 +100,14 @@ export function AddIncomeSourceDialog() {
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={isPending || !name.trim() || !amount}
-            >
+            <Button type="submit" disabled={isPending || !amount}>
               {isPending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
                   Adding...
                 </>
               ) : (
-                "Add Source"
+                "Add funds"
               )}
             </Button>
           </DialogFooter>

@@ -1,5 +1,9 @@
-import { getTransactions, getBudgetCategories } from "@/lib/db/actions";
-import { getCurrentPeriodLabel } from "@/lib/format";
+import {
+  getTransactions,
+  getIncomeTransactions,
+  getBudgetCategories,
+  getCurrentPeriodLabel,
+} from "@/lib/db/actions";
 import {
   Card,
   CardContent,
@@ -8,16 +12,24 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AddTransactionDialog } from "./add-transaction-dialog";
+import { AddFundsDialog } from "@/components/add-funds-dialog";
 import { TransactionRow } from "./transaction-row";
+import { IncomeTransactionRow } from "@/components/income-transaction-row";
 import { formatCurrency } from "@/lib/format";
 
 export default async function TransactionsPage() {
-  const [transactions, categories] = await Promise.all([
+  const [transactions, incomeTransactions, categories, periodLabel] = await Promise.all([
     getTransactions(),
+    getIncomeTransactions(),
     getBudgetCategories(),
+    getCurrentPeriodLabel(),
   ]);
 
   const totalSpent = transactions.reduce(
+    (acc, t) => acc + Number(t.amount),
+    0
+  );
+  const totalIncome = incomeTransactions.reduce(
     (acc, t) => acc + Number(t.amount),
     0
   );
@@ -30,11 +42,44 @@ export default async function TransactionsPage() {
             Transactions
           </h1>
           <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            {getCurrentPeriodLabel()} — Log expenses to auto-deduct from budget
+            {periodLabel} — Log expenses to auto-deduct from budget
           </p>
         </div>
-        <AddTransactionDialog categories={categories} />
+        <div className="flex gap-2">
+          <AddTransactionDialog categories={categories} />
+          <AddFundsDialog />
+        </div>
       </div>
+
+      <Card className="bg-white/80 dark:bg-slate-900/50">
+        <CardHeader>
+          <CardTitle>Funds added this period</CardTitle>
+          <CardDescription>
+            Total: +{formatCurrency(totalIncome)} — Income that increases your available funds.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {incomeTransactions.length === 0 ? (
+            <p className="text-center text-muted-foreground py-6 text-sm">
+              No funds added yet. Click &quot;Add funds&quot; when you receive income.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {incomeTransactions.map((txn) => (
+                <IncomeTransactionRow
+                  key={txn.id}
+                  transaction={{
+                    id: txn.id,
+                    amount: Number(txn.amount),
+                    date: txn.date,
+                    description: txn.description,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="bg-white/80 dark:bg-slate-900/50">
         <CardHeader>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Wallet, PiggyBank, Receipt, LayoutDashboard, Menu } from "lucide-react";
+import { PiggyBank, Receipt, LayoutDashboard, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,6 @@ import {
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/income", label: "Income", icon: Wallet },
   { href: "/budget", label: "Budget", icon: PiggyBank },
   { href: "/transactions", label: "Transactions", icon: Receipt },
 ];

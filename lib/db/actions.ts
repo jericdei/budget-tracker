@@ -2,62 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { roundToTwoDecimals } from "@/lib/format";
-import { eq, and, gte, lte, sql, sum } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, sum } from "drizzle-orm";
 import { db } from "./index";
 import {
-  incomeSources,
   budgetCategories,
+  budgetPeriods,
+  incomeTransactions,
   transactions,
-  type NewIncomeSource,
   type NewBudgetCategory,
   type NewTransaction,
 } from "./schema";
-
-const FREQUENCY_TO_MONTHLY: Record<string, number> = {
-  none: 0, // handled separately in getTotalPeriodIncome (full amount)
-  weekly: 4.33,
-  biweekly: 2.17,
-  monthly: 1,
-  yearly: 1 / 12,
-};
-
-function toMonthlyAmount(amount: number, frequency: string): number {
-  return amount * (FREQUENCY_TO_MONTHLY[frequency] ?? 1);
-}
-
-export async function getIncomeSources() {
-  return db.select().from(incomeSources).where(eq(incomeSources.isActive, 1));
-}
-
-export async function getTotalMonthlyIncome() {
-  const sources = await getIncomeSources();
-  return sources.reduce(
-    (acc, s) => acc + toMonthlyAmount(Number(s.amount), s.frequency),
-    0
-  );
-}
-
-export async function createIncomeSource(data: {
-  name: string;
-  amount: string;
-  frequency: string;
-}) {
-  await db.insert(incomeSources).values({
-    name: data.name,
-    amount: roundToTwoDecimals(data.amount),
-    frequency: data.frequency as NewIncomeSource["frequency"],
-  });
-  revalidatePath("/");
-  revalidatePath("/income");
-  revalidatePath("/budget");
-}
-
-export async function deleteIncomeSource(id: string) {
-  await db.delete(incomeSources).where(eq(incomeSources.id, id));
-  revalidatePath("/");
-  revalidatePath("/income");
-  revalidatePath("/budget");
-}
 
 export async function getBudgetCategories() {
   return db.select().from(budgetCategories).orderBy(budgetCategories.name);
@@ -80,7 +34,7 @@ export async function createBudgetCategory(data: {
 
 export async function updateBudgetCategory(
   id: string,
-  data: { name?: string; type?: string; allocatedAmount?: string }
+  data: { name?: string; type?: string; allocatedAmount?: string },
 ) {
   await db
     .update(budgetCategories)
@@ -104,8 +58,8 @@ export async function deleteBudgetCategory(id: string) {
   revalidatePath("/transactions");
 }
 
-/** Bi-monthly periods: 1st–15th and 16th–end of month */
-function getPeriodBounds(date: Date) {
+/** Bi-monthly periods: 1st–15th and 16th–end of month (used when no manual period set) */
+function getDefaultPeriodBounds(date: Date) {
   const year = date.getFullYear();
   const month = date.getMonth();
   const day = date.getDate();
@@ -124,23 +78,126 @@ function getPeriodBounds(date: Date) {
   return { start, end };
 }
 
-export async function getTotalPeriodIncome() {
-  const sources = await getIncomeSources();
-  let total = 0;
-  for (const s of sources) {
-    const amount = Number(s.amount);
-    if (s.frequency === "none") {
-      total += amount; // full amount, not split across periods
-    } else {
-      total += (amount * (FREQUENCY_TO_MONTHLY[s.frequency] ?? 1)) / 2;
-    }
+export async function getPeriodStart(): Promise<Date | null> {
+  const [latest] = await db
+    .select({ startedAt: budgetPeriods.startedAt })
+    .from(budgetPeriods)
+    .orderBy(desc(budgetPeriods.startedAt))
+    .limit(1);
+  return latest ? new Date(latest.startedAt) : null;
+}
+
+export async function startNewPeriod(startedAt: Date, funds: string) {
+  await db.insert(budgetPeriods).values({
+    startedAt,
+    funds: roundToTwoDecimals(funds),
+  });
+  revalidatePath("/");
+  revalidatePath("/budget");
+  revalidatePath("/transactions");
+}
+
+export type PeriodBounds = { start: Date; end: Date };
+
+export async function getCurrentPeriodLabel(): Promise<string> {
+  const manualStart = await getPeriodStart();
+  const end = new Date();
+  if (manualStart) {
+    const startStr = manualStart.toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    const endStr = end.toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    return `Since ${startStr} – ${endStr}`;
   }
-  return total;
+  const day = end.getDate();
+  const month = end.toLocaleString("en-US", { month: "short" });
+  const year = end.getFullYear();
+  const lastDay = new Date(year, end.getMonth() + 1, 0).getDate();
+  const suffix = lastDay === 31 ? "st" : "th";
+  return day <= 15
+    ? `1st-15th ${month} ${year}`
+    : `16th-${lastDay}${suffix} ${month} ${year}`;
+}
+
+export async function getPeriodBounds(
+  date: Date = new Date(),
+): Promise<PeriodBounds> {
+  const manualStart = await getPeriodStart();
+  if (manualStart) {
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+    return { start: manualStart, end };
+  }
+  return getDefaultPeriodBounds(date);
+}
+
+export async function getTotalPeriodIncome() {
+  const [latest] = await db
+    .select({ id: budgetPeriods.id, funds: budgetPeriods.funds, startedAt: budgetPeriods.startedAt })
+    .from(budgetPeriods)
+    .orderBy(desc(budgetPeriods.startedAt))
+    .limit(1);
+  if (!latest) return 0;
+  const { start, end } = await getPeriodBounds();
+  const incomeResult = await db
+    .select({ total: sum(incomeTransactions.amount) })
+    .from(incomeTransactions)
+    .where(
+      and(
+        gte(incomeTransactions.date, start),
+        lte(incomeTransactions.date, end)
+      )
+    );
+  const incomeAdded = Number(incomeResult[0]?.total ?? 0);
+  return Number(latest.funds) + incomeAdded;
+}
+
+export async function getIncomeTransactions(periodDate?: Date) {
+  const targetDate = periodDate ?? new Date();
+  const { start, end } = await getPeriodBounds(targetDate);
+  return db
+    .select()
+    .from(incomeTransactions)
+    .where(
+      and(
+        gte(incomeTransactions.date, start),
+        lte(incomeTransactions.date, end)
+      )
+    )
+    .orderBy(incomeTransactions.date);
+}
+
+export async function createIncomeTransaction(data: {
+  amount: string;
+  date: string;
+  description?: string;
+}) {
+  await db.insert(incomeTransactions).values({
+    amount: roundToTwoDecimals(data.amount),
+    date: new Date(data.date),
+    description: data.description ?? null,
+  });
+  revalidatePath("/");
+  revalidatePath("/budget");
+  revalidatePath("/transactions");
+}
+
+export async function deleteIncomeTransaction(id: string) {
+  await db.delete(incomeTransactions).where(eq(incomeTransactions.id, id));
+  revalidatePath("/");
+  revalidatePath("/budget");
+  revalidatePath("/transactions");
 }
 
 export async function getTransactions(periodDate?: Date) {
   const targetDate = periodDate ?? new Date();
-  const { start, end } = getPeriodBounds(targetDate);
+  const { start, end } = await getPeriodBounds(targetDate);
 
   const txns = await db
     .select({
@@ -157,7 +214,7 @@ export async function getTransactions(periodDate?: Date) {
     .from(transactions)
     .innerJoin(
       budgetCategories,
-      eq(transactions.budgetCategoryId, budgetCategories.id)
+      eq(transactions.budgetCategoryId, budgetCategories.id),
     )
     .where(and(gte(transactions.date, start), lte(transactions.date, end)))
     .orderBy(transactions.date);
@@ -167,7 +224,7 @@ export async function getTransactions(periodDate?: Date) {
 
 export async function getSpendingByCategory(periodDate?: Date) {
   const targetDate = periodDate ?? new Date();
-  const { start, end } = getPeriodBounds(targetDate);
+  const { start, end } = await getPeriodBounds(targetDate);
 
   const categories = await db.select().from(budgetCategories);
   const spentResult = await db
@@ -180,7 +237,7 @@ export async function getSpendingByCategory(periodDate?: Date) {
     .groupBy(transactions.budgetCategoryId);
 
   const spentMap = new Map(
-    spentResult.map((r) => [r.categoryId, Number(r.spent ?? 0)])
+    spentResult.map((r) => [r.categoryId, Number(r.spent ?? 0)]),
   );
 
   return categories.map((cat) => {
@@ -227,7 +284,7 @@ export async function updateTransaction(
     description?: string;
     imageData?: string | null;
     imageType?: string | null;
-  }
+  },
 ) {
   await db
     .update(transactions)

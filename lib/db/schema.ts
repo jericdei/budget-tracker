@@ -4,17 +4,8 @@ import {
   uuid,
   decimal,
   timestamp,
-  integer,
   pgEnum,
 } from "drizzle-orm/pg-core";
-
-export const incomeFrequencyEnum = pgEnum("income_frequency", [
-  "none",
-  "weekly",
-  "biweekly",
-  "monthly",
-  "yearly",
-]);
 
 export const budgetCategoryTypeEnum = pgEnum("budget_category_type", [
   "expense",
@@ -22,15 +13,6 @@ export const budgetCategoryTypeEnum = pgEnum("budget_category_type", [
   "insurance",
   "other",
 ]);
-
-export const incomeSources = pgTable("income_sources", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
-  frequency: incomeFrequencyEnum("frequency").notNull().default("monthly"),
-  isActive: integer("is_active").notNull().default(1),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
 
 export const budgetCategories = pgTable("budget_categories", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -40,6 +22,21 @@ export const budgetCategories = pgTable("budget_categories", {
     precision: 12,
     scale: 2,
   }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const budgetPeriods = pgTable("budget_periods", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  funds: decimal("funds", { precision: 12, scale: 2 }).notNull().default("0"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const incomeTransactions = pgTable("income_transactions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  date: timestamp("date").notNull(),
+  description: text("description"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -56,8 +53,6 @@ export const transactions = pgTable("transactions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export type IncomeSource = typeof incomeSources.$inferSelect;
-export type NewIncomeSource = typeof incomeSources.$inferInsert;
 export type BudgetCategory = typeof budgetCategories.$inferSelect;
 export type NewBudgetCategory = typeof budgetCategories.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
