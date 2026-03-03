@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { deleteTransaction } from "@/lib/db/actions";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDateTime } from "@/lib/format";
 import { EditTransactionDialog } from "@/app/transactions/edit-transaction-dialog";
 import type { BudgetCategory } from "@/lib/db/schema";
 
@@ -76,11 +76,7 @@ export function TransactionRow({
               {transaction.description || "Expense"}
             </p>
             <p className="text-xs text-muted-foreground sm:text-sm">
-              {new Date(transaction.date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}{" "}
+              {formatDateTime(transaction.date)}{" "}
               •{" "}
               <Badge variant="secondary" className="inline text-xs font-normal">
                 {transaction.categoryName}

@@ -28,7 +28,6 @@ export const budgetCategories = pgTable("budget_categories", {
 export const budgetPeriods = pgTable("budget_periods", {
   id: uuid("id").primaryKey().defaultRandom(),
   startedAt: timestamp("started_at").notNull().defaultNow(),
-  funds: decimal("funds", { precision: 12, scale: 2 }).notNull().default("0"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

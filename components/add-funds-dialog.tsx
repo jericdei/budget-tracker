@@ -45,7 +45,7 @@ export function AddFundsDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline">
           <Plus className="size-4" />
           Add funds
         </Button>

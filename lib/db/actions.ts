@@ -87,10 +87,9 @@ export async function getPeriodStart(): Promise<Date | null> {
   return latest ? new Date(latest.startedAt) : null;
 }
 
-export async function startNewPeriod(startedAt: Date, funds: string) {
+export async function startNewPeriod(startedAt: Date) {
   await db.insert(budgetPeriods).values({
     startedAt,
-    funds: roundToTwoDecimals(funds),
   });
   revalidatePath("/");
   revalidatePath("/budget");
@@ -138,12 +137,6 @@ export async function getPeriodBounds(
 }
 
 export async function getTotalPeriodIncome() {
-  const [latest] = await db
-    .select({ id: budgetPeriods.id, funds: budgetPeriods.funds, startedAt: budgetPeriods.startedAt })
-    .from(budgetPeriods)
-    .orderBy(desc(budgetPeriods.startedAt))
-    .limit(1);
-  if (!latest) return 0;
   const { start, end } = await getPeriodBounds();
   const incomeResult = await db
     .select({ total: sum(incomeTransactions.amount) })
@@ -154,8 +147,7 @@ export async function getTotalPeriodIncome() {
         lte(incomeTransactions.date, end)
       )
     );
-  const incomeAdded = Number(incomeResult[0]?.total ?? 0);
-  return Number(latest.funds) + incomeAdded;
+  return Number(incomeResult[0]?.total ?? 0);
 }
 
 export async function getIncomeTransactions(periodDate?: Date) {
@@ -217,7 +209,7 @@ export async function getTransactions(periodDate?: Date) {
       eq(transactions.budgetCategoryId, budgetCategories.id),
     )
     .where(and(gte(transactions.date, start), lte(transactions.date, end)))
-    .orderBy(transactions.date);
+    .orderBy(desc(transactions.date));
 
   return txns;
 }

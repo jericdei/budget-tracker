@@ -24,15 +24,12 @@ export function StartNewPeriodDialog() {
   const [date, setDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [funds, setFunds] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (funds === "" || parseFloat(funds) < 0) return;
     startTransition(async () => {
-      await startNewPeriod(new Date(date), funds);
+      await startNewPeriod(new Date(date));
       setOpen(false);
-      setFunds("");
       router.refresh();
     });
   }
@@ -50,23 +47,12 @@ export function StartNewPeriodDialog() {
           <DialogHeader>
             <DialogTitle>Start new period</DialogTitle>
             <DialogDescription>
-              Reset the budget and add funds. Use when you receive your salary.
+              Reset the budget period. Use when you receive your salary.
               Transactions and spending will be shown from this date onward.
+              Add funds using the &quot;Add funds&quot; button after starting.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="period-funds">Amount to add</Label>
-              <Input
-                id="period-funds"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={funds}
-                onChange={(e) => setFunds(e.target.value)}
-              />
-            </div>
             <div className="grid gap-2">
               <Label htmlFor="period-date">Period start date</Label>
               <Input
@@ -86,7 +72,7 @@ export function StartNewPeriodDialog() {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending || funds === "" || parseFloat(funds) < 0}>
+            <Button type="submit" disabled={isPending}>
               {isPending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />

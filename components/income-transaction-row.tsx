@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Trash2 } from "lucide-react";
 import { deleteIncomeTransaction } from "@/lib/db/actions";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDateTime } from "@/lib/format";
 
 export function IncomeTransactionRow({
   transaction,
@@ -45,11 +45,7 @@ export function IncomeTransactionRow({
             {transaction.description || "Funds added"}
           </p>
           <p className="text-xs text-muted-foreground sm:text-sm">
-            {new Date(transaction.date).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
+            {formatDateTime(transaction.date)}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
